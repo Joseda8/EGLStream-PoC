@@ -177,28 +177,13 @@ void ESUTIL_API thisMainLoop ( ESContext *esContext )
     EGLint state = 0;
     PFNEGLSTREAMCONSUMERACQUIREKHRPROC eglStreamConsumerAcquireKHR = (PFNEGLSTREAMCONSUMERACQUIREKHRPROC)eglGetProcAddress("eglStreamConsumerAcquireKHR");
     PFNEGLSTREAMCONSUMERRELEASEKHRPROC eglStreamConsumerReleaseKHR = (PFNEGLSTREAMCONSUMERRELEASEKHRPROC)eglGetProcAddress("eglStreamConsumerReleaseKHR");
+    PFNEGLQUERYSTREAMKHRPROC eglQueryStreamKHR = (PFNEGLQUERYSTREAMKHRPROC)eglGetProcAddress("eglQueryStreamKHR");
 
     while(1)
-    {
-
-      PFNEGLQUERYSTREAMKHRPROC eglQueryStreamKHR = (PFNEGLQUERYSTREAMKHRPROC)eglGetProcAddress("eglQueryStreamKHR");
-      if (!eglStreamConsumerAcquireKHR(esContext->eglDisplay, stream)) {
-         printf ("No image\n");
-      } else {
-         printf ("Valid \n");
-         eglSwapBuffers(esContext->eglDisplay, esContext->eglSurface);
-         if (!eglStreamConsumerReleaseKHR(esContext->eglDisplay, stream)) {
-            printf ("Release frame failed.\n");
-         } else {
-            printf ("Release frame.\n");
-         }
-                
-      }
-
+    { 
        state = 0;
        eglQueryStreamKHR(esContext->eglDisplay, stream, EGL_STREAM_STATE_KHR, &state);
 
-       /* Check why acquire failed */
        switch (state)
        {
        case EGL_STREAM_STATE_DISCONNECTED_KHR:
@@ -208,21 +193,33 @@ void ESUTIL_API thisMainLoop ( ESContext *esContext )
            printf("Bad state.\n");
            break;
        case EGL_STREAM_STATE_EMPTY_KHR:
-            printf("Empty.\n");
+           // printf("Empty.\n");
            break;
        case EGL_STREAM_STATE_CONNECTING_KHR:
-            printf("Connecting.\n");
+           printf("Connecting.\n");
            break;
        case EGL_STREAM_STATE_NEW_FRAME_AVAILABLE_KHR:
-            printf("New frame.\n");
+           printf("New frame.\n");
            break;
        case EGL_STREAM_STATE_OLD_FRAME_AVAILABLE_KHR:
-            printf("Old frame.\n");
+           printf("Old frame.\n");
            break;
        default:
            printf("Unexpected stream state: %04x.\n", state);
        }
 
+      if (!eglStreamConsumerAcquireKHR(esContext->eglDisplay, stream)) {
+         //printf ("No frame received\n");
+      } else {
+
+         if (!eglStreamConsumerReleaseKHR(esContext->eglDisplay, stream)) {
+            printf ("Release frame failed.\n");
+         } else {
+            printf ("Frame released.\n");
+         }
+
+         eglSwapBuffers(esContext->eglDisplay, esContext->eglSurface);     
+      }
 
     }
 }
