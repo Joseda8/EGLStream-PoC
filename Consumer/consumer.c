@@ -172,6 +172,19 @@ void ESUTIL_API thisMainLoop ( ESContext *esContext )
     float totaltime = 0.0f;
     unsigned int frames = 0;
 
+   UserData *userData = esContext->userData;
+   GLfloat vVertices[] = { -0.5f,  0.5f, 0.0f,  // Position 0
+                            0.0f,  0.0f,        // TexCoord 0 
+                           -0.5f, -0.5f, 0.0f,  // Position 1
+                            0.0f,  1.0f,        // TexCoord 1
+                            0.5f, -0.5f, 0.0f,  // Position 2
+                            1.0f,  1.0f,        // TexCoord 2
+                            0.5f,  0.5f, 0.0f,  // Position 3
+                            1.0f,  0.0f         // TexCoord 3
+                         };
+   GLushort indices[] = { 0, 1, 2, 0, 2, 3 };
+
+
     gettimeofday ( &t1 , &tz );
 
     EGLint state = 0;
@@ -181,6 +194,31 @@ void ESUTIL_API thisMainLoop ( ESContext *esContext )
 
     while(1)
     { 
+
+        if ( !eglMakeCurrent(esContext->eglDisplay, esContext->eglSurface, esContext->eglSurface, esContext->eglContext) )
+        {
+            printf("No make.\n");
+        }
+   
+
+
+       // Set the viewport
+       glViewport ( 0, 0, esContext->width, esContext->height );
+       
+
+       // Use the program object
+       glUseProgram ( userData->programObject );
+
+       // Clear the color buffer
+       glClear ( GL_COLOR_BUFFER_BIT );
+
+       // Bind the texture
+       glBindTexture ( GL_TEXTURE_EXTERNAL_OES, userData->textureId );
+
+
+       glDrawArrays ( GL_TRIANGLE_STRIP, 1, 4 );
+
+
        state = 0;
        eglQueryStreamKHR(esContext->eglDisplay, stream, EGL_STREAM_STATE_KHR, &state);
 

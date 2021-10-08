@@ -37,7 +37,7 @@ typedef struct
 ///
 // Create a simple 2x2 texture image with four different colors
 //
-GLuint CreateSimpleTexture2D( int set_red)
+GLuint CreateSimpleTexture2D( )
 {
    // Texture object handle
    GLuint textureId;
@@ -45,7 +45,7 @@ GLuint CreateSimpleTexture2D( int set_red)
    // 2x2 Image, 3 bytes per pixel (R, G, B)
    GLubyte pixels[4 * 3] =
    {  
-      255,   0,   set_red, // Red
+      255,   0,   0, // Red
         0, 255,   0, // Green
         0,   0, 255, // Blue
       255, 255,   0  // Yellow
@@ -109,7 +109,7 @@ int Init ( ESContext *esContext )
    userData->samplerLoc = glGetUniformLocation ( userData->programObject, "s_texture" );
 
    // Load the texture
-   userData->textureId = CreateSimpleTexture2D (88);
+   userData->textureId = CreateSimpleTexture2D ();
 
    glClearColor ( 0.0f, 0.0f, 0.0f, 0.0f );
    return GL_TRUE;
@@ -118,7 +118,6 @@ int Init ( ESContext *esContext )
 ///
 // Draw a triangle using the shader pair created in Init()
 //
-int control = 0;
 void Draw ( ESContext *esContext )
 {
    UserData *userData = esContext->userData;
@@ -152,13 +151,6 @@ void Draw ( ESContext *esContext )
    glEnableVertexAttribArray ( userData->positionLoc );
    glEnableVertexAttribArray ( userData->texCoordLoc );
 
-   control++;
-   if (control == 250){
-      control = 0;
-   }
-   userData->textureId = CreateSimpleTexture2D (control);
-   // printf ("%d\n", control);
-   
    // Bind the texture
    glActiveTexture ( GL_TEXTURE0 );
    glBindTexture ( GL_TEXTURE_2D, userData->textureId );
@@ -186,60 +178,15 @@ void ShutDown ( ESContext *esContext )
    free(esContext->userData);
 }
 
-#define TEXTURES_NUM 1
-
 int main ( int argc, char *argv[] )
 {
    ESContext esContext;
    UserData  userData;
 
-   EGLBoolean eglStatus = EGL_TRUE;
-   EGLStreamKHR stream;
-
-   static const EGLint streamAttrFIFOMode[] = { EGL_STREAM_FIFO_LENGTH_KHR, 5, EGL_SUPPORT_REUSE_NV, EGL_FALSE, EGL_NONE };
-
-   EGLNativeFileDescriptorKHR fd;
-   char *socket_name = "Xeventfd_socket";
-    struct sockaddr_un address;
-    int  socket_fd;
-    int evfd;
-
-    socket_fd = socket(PF_UNIX, SOCK_STREAM, 0);
-    if (socket_fd < 0)  {
-      fprintf(stderr,"socket() failed: %s\n", strerror(errno));
-      return 1;
-    }
-
-    memset(&address, 0, sizeof(struct sockaddr_un));
-
-    address.sun_family = AF_UNIX;
-    snprintf(address.sun_path,sizeof(address.sun_path), "%s", socket_name);
-    address.sun_path[0] = '\0';
-
-    if (connect(socket_fd, (struct sockaddr *) &address, sizeof(struct sockaddr_un)) != 0) {
-      fprintf(stderr,"connect() failed: %s\n", strerror(errno));
-      return 1;
-    }
-
-    if (ancil_recv_fd(socket_fd, &evfd)) {
-      perror("ancil_recv_fd");
-      exit(1);
-    } else {
-      printf("Received eventfd on: %d\n", evfd);
-    }
-
-    if (evfd < 0) {
-   printf("bad event fd\n");
-   exit(1);
-    }
-
-    close(socket_fd);
-
-
    esInitContext ( &esContext );
    esContext.userData = &userData;
 
-   esCreateWindow ( &esContext, "Simple Texture 2D", 320, 240, ES_WINDOW_RGB, &stream, evfd);
+   esCreateWindow ( &esContext, "Simple Texture 2D", 320, 240, ES_WINDOW_RGB );
 
    if ( !Init ( &esContext ) )
       return 0;
@@ -249,6 +196,4 @@ int main ( int argc, char *argv[] )
    esMainLoop ( &esContext );
 
    ShutDown ( &esContext );
-
-   return eglStatus;
 }

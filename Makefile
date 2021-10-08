@@ -7,22 +7,27 @@ COMMONSRC=./Common/esShader.c    \
 
 COMMONHRD=esUtil.h
 
+UTILBASE=./Base/esUtil.c
 UTILCONSUMER=./Consumer/esUtil.c
 UTILPRODUCER=./Producer/esUtil.c
 
-CH09SRC1=./Consumer/consumer.c
-CH09SRCP=./Producer/producer.c
+SRC_B=./Base/base.c
+SRC_C=./Consumer/consumer.c
+SRC_P=./Producer/producer.c
 
 default: all
 
-all:                           \
-     ./Consumer/consumer       \
+all:                                      \
+     ./Base/base  \
+     ./Consumer/consumer                  \
      ./Producer/producer
 
 clean:
-	rm ./Consumer/consumer ./Producer/producer
+	rm ./Consumer/consumer ./Producer/producer ./Base/base
 
-./Consumer/consumer: ${UTILCONSUMER} ${COMMONHDR} ${CH09SRC1}
-	gcc ${COMMONSRC} ${UTILCONSUMER} ${CH09SRC1} -o ./$@ ${INCDIR} ${LIBS}
-./Producer/producer: ${UTILPRODUCER} ${COMMONHDR} ${CH09SRCP}
-	gcc ${COMMONSRC} ${UTILPRODUCER} ${CH09SRCP} -o ./$@ ${INCDIR} ${LIBS}
+./Base/base: ${UTILBASE} ${COMMONHDR} ${SRC_B}
+	gcc ${COMMONSRC} ${UTILBASE} ${SRC_B} -o ./$@ ${INCDIR} ${LIBS}
+./Consumer/consumer: ${UTILCONSUMER} ${COMMONHDR} ${SRC_C}
+	gcc ${COMMONSRC} ${UTILCONSUMER} ${SRC_C} -o ./$@ ${INCDIR} ${LIBS}
+./Producer/producer: ${UTILPRODUCER} ${COMMONHDR} ${SRC_P}
+	gcc ${COMMONSRC} ${UTILPRODUCER} ${SRC_P} -o ./$@ ${INCDIR} ${LIBS}
