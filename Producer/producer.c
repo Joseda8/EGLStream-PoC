@@ -37,7 +37,7 @@ typedef struct
 ///
 // Create a simple 2x2 texture image with four different colors
 //
-GLuint CreateSimpleTexture2D( int set_red)
+GLuint CreateSimpleTexture2D( int red, int green, int blue )
 {
    // Texture object handle
    GLuint textureId;
@@ -45,10 +45,10 @@ GLuint CreateSimpleTexture2D( int set_red)
    // 2x2 Image, 3 bytes per pixel (R, G, B)
    GLubyte pixels[4 * 3] =
    {  
-      255,   0,   set_red, // Red
+      255,   0,   0, // Red
         0, 255,   0, // Green
         0,   0, 255, // Blue
-      255, 255,   0  // Yellow
+      red, green, blue  // Yellow
    };
 
    // Use tightly packed data
@@ -77,7 +77,7 @@ GLuint CreateSimpleTexture2D( int set_red)
 //
 int Init ( ESContext *esContext )
 {
-   esContext->userData = malloc(sizeof(UserData));	
+   esContext->userData = malloc(sizeof(UserData)); 
    UserData *userData = esContext->userData;
    GLbyte vShaderStr[] =  
       "attribute vec4 a_position;   \n"
@@ -109,7 +109,7 @@ int Init ( ESContext *esContext )
    userData->samplerLoc = glGetUniformLocation ( userData->programObject, "s_texture" );
 
    // Load the texture
-   userData->textureId = CreateSimpleTexture2D (88);
+   userData->textureId = CreateSimpleTexture2D (255, 0, 255);
 
    glClearColor ( 0.0f, 0.0f, 0.0f, 0.0f );
    return GL_TRUE;
@@ -156,9 +156,8 @@ void Draw ( ESContext *esContext )
    if (control == 250){
       control = 0;
    }
-   userData->textureId = CreateSimpleTexture2D (control);
-   // printf ("%d\n", control);
-   
+   userData->textureId = CreateSimpleTexture2D (200, control, 255);
+
    // Bind the texture
    glActiveTexture ( GL_TEXTURE0 );
    glBindTexture ( GL_TEXTURE_2D, userData->textureId );
@@ -182,11 +181,9 @@ void ShutDown ( ESContext *esContext )
 
    // Delete program object
    glDeleteProgram ( userData->programObject );
-	
+   
    free(esContext->userData);
 }
-
-#define TEXTURES_NUM 1
 
 int main ( int argc, char *argv[] )
 {
@@ -200,46 +197,45 @@ int main ( int argc, char *argv[] )
 
    EGLNativeFileDescriptorKHR fd;
    char *socket_name = "Xeventfd_socket";
-    struct sockaddr_un address;
-    int  socket_fd;
-    int evfd;
+   struct sockaddr_un address;
+   int  socket_fd;
+   int evfd;
 
-    socket_fd = socket(PF_UNIX, SOCK_STREAM, 0);
-    if (socket_fd < 0)  {
+   socket_fd = socket(PF_UNIX, SOCK_STREAM, 0);
+   if (socket_fd < 0)  {
       fprintf(stderr,"socket() failed: %s\n", strerror(errno));
       return 1;
-    }
+   }
 
-    memset(&address, 0, sizeof(struct sockaddr_un));
+   memset(&address, 0, sizeof(struct sockaddr_un));
 
-    address.sun_family = AF_UNIX;
-    snprintf(address.sun_path,sizeof(address.sun_path), "%s", socket_name);
-    address.sun_path[0] = '\0';
+   address.sun_family = AF_UNIX;
+   snprintf(address.sun_path,sizeof(address.sun_path), "%s", socket_name);
+   address.sun_path[0] = '\0';
 
-    if (connect(socket_fd, (struct sockaddr *) &address, sizeof(struct sockaddr_un)) != 0) {
+   if (connect(socket_fd, (struct sockaddr *) &address, sizeof(struct sockaddr_un)) != 0) {
       fprintf(stderr,"connect() failed: %s\n", strerror(errno));
       return 1;
-    }
+   }
 
-    if (ancil_recv_fd(socket_fd, &evfd)) {
+   if (ancil_recv_fd(socket_fd, &evfd)) {
       perror("ancil_recv_fd");
-      exit(1);
-    } else {
+      exit(1);   
+   } else {
       printf("Received eventfd on: %d\n", evfd);
-    }
+   }
 
-    if (evfd < 0) {
-   printf("bad event fd\n");
-   exit(1);
-    }
+   if (evfd < 0) {
+      printf("bad event fd\n");
+      exit(1);
+   }
 
-    close(socket_fd);
-
+   close(socket_fd);
 
    esInitContext ( &esContext );
    esContext.userData = &userData;
 
-   esCreateWindow ( &esContext, "Simple Texture 2D", 320, 240, ES_WINDOW_RGB, &stream, evfd);
+   esCreateWindow ( &esContext, "Simple Texture 2D", 320, 240, ES_WINDOW_RGB, &stream, evfd );
 
    if ( !Init ( &esContext ) )
       return 0;
@@ -249,6 +245,4 @@ int main ( int argc, char *argv[] )
    esMainLoop ( &esContext );
 
    ShutDown ( &esContext );
-
-   return eglStatus;
 }

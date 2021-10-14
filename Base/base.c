@@ -37,7 +37,7 @@ typedef struct
 ///
 // Create a simple 2x2 texture image with four different colors
 //
-GLuint CreateSimpleTexture2D( )
+GLuint CreateSimpleTexture2D( int red, int green, int blue )
 {
    // Texture object handle
    GLuint textureId;
@@ -48,7 +48,7 @@ GLuint CreateSimpleTexture2D( )
       255,   0,   0, // Red
         0, 255,   0, // Green
         0,   0, 255, // Blue
-      255, 255,   0  // Yellow
+      red, green, blue  // Yellow
    };
 
    // Use tightly packed data
@@ -109,7 +109,7 @@ int Init ( ESContext *esContext )
    userData->samplerLoc = glGetUniformLocation ( userData->programObject, "s_texture" );
 
    // Load the texture
-   userData->textureId = CreateSimpleTexture2D ();
+   userData->textureId = CreateSimpleTexture2D (255, 0, 255);
 
    glClearColor ( 0.0f, 0.0f, 0.0f, 0.0f );
    return GL_TRUE;

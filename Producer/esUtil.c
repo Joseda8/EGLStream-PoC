@@ -116,7 +116,7 @@ EGLBoolean CreateEGLContext ( EGLNativeWindowType hWnd, EGLDisplay* eglDisplay,
    // Make the context current
    if ( !eglMakeCurrent(display, surface, surface, context) )
    {
-      printf ("Bag make current \n");
+      printf ("Bad make current \n");
       return EGL_FALSE;
    }
    
