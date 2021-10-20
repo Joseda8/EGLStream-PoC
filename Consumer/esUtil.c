@@ -23,7 +23,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <sys/time.h>
-#include <GLES2/gl2.h>
+#include <GLES3/gl3.h>
 #include <EGL/egl.h>
 #include "esUtil.h"
 
@@ -306,7 +306,7 @@ void ESUTIL_API esMainLoop ( ESContext *esContext )
         if (esContext->drawFunc != NULL)
             esContext->drawFunc(esContext);
 
-        eglSwapBuffers(esContext->eglDisplay, esContext->eglSurface);
+        // eglSwapBuffers(esContext->eglDisplay, esContext->eglSurface);
 
         totaltime += deltatime;
         frames++;

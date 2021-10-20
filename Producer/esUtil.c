@@ -330,7 +330,7 @@ void ESUTIL_API esMainLoop ( ESContext *esContext )
         if (esContext->drawFunc != NULL)
             esContext->drawFunc(esContext);
 
-        eglSwapBuffers(esContext->eglDisplay, esContext->eglSurface);
+        // eglSwapBuffers(esContext->eglDisplay, esContext->eglSurface);
 
         totaltime += deltatime;
         frames++;

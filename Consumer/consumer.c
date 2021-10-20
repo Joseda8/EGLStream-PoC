@@ -26,6 +26,7 @@ PFNEGLQUERYSTREAMKHRPROC eglQueryStreamKHR;
 
 EGLStreamKHR stream;
 EGLBoolean eglStatus = EGL_TRUE;
+GLuint textureId2D;
 
 typedef struct
 {
@@ -46,11 +47,6 @@ typedef struct
 
 
 void initEGLStreamUtil () {
-   glTexParameterf (GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_EDGE);
-   glTexParameterf (GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T,     GL_CLAMP_TO_EDGE);
-   glTexParameterf (GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-   glTexParameterf (GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
    eglGetStreamFileDescriptorKHR = (PFNEGLGETSTREAMFILEDESCRIPTORKHRPROC)eglGetProcAddress("eglGetStreamFileDescriptorKHR");
    eglStreamConsumerAcquireKHR = (PFNEGLSTREAMCONSUMERACQUIREKHRPROC)eglGetProcAddress("eglStreamConsumerAcquireKHR");
    eglStreamConsumerReleaseKHR = (PFNEGLSTREAMCONSUMERRELEASEKHRPROC)eglGetProcAddress("eglStreamConsumerReleaseKHR");
@@ -76,9 +72,6 @@ GLuint CreateSimpleTexture2D( int red, int green, int blue )
       red, green, blue  // Yellow
    };
 
-   // Use tightly packed data
-   glPixelStorei ( GL_UNPACK_ALIGNMENT, 1 );
-
    // Generate a texture object
    glGenTextures ( 1, &textureId );
    if (glGetError () == GL_NO_ERROR) {
@@ -87,6 +80,27 @@ GLuint CreateSimpleTexture2D( int red, int green, int blue )
 
    // Bind the texture object
    glBindTexture ( GL_TEXTURE_EXTERNAL_OES, textureId );
+   glTexParameterf (GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_EDGE);
+   glTexParameterf (GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_WRAP_T,     GL_CLAMP_TO_EDGE);
+   glTexParameterf (GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+   glTexParameterf (GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+
+   // Use tightly packed data
+   glPixelStorei ( GL_UNPACK_ALIGNMENT, 1 );
+
+   // Generate a texture object
+   glGenTextures ( 1, &textureId2D );
+
+   // Bind the texture object
+   glBindTexture ( GL_TEXTURE_2D, textureId2D );
+
+   // Load the texture
+   glTexImage2D ( GL_TEXTURE_2D, 0, GL_RGB, 2, 2, 0, GL_RGB, GL_UNSIGNED_BYTE, pixels );
+
+   // Set the filtering mode
+   glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+   glTexParameteri ( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 
    return textureId;
 
@@ -101,23 +115,28 @@ int Init ( ESContext *esContext )
    esContext->userData = malloc(sizeof(UserData));  
    UserData *userData = esContext->userData;
    GLbyte vShaderStr[] =  
-      "attribute vec4 a_position;   \n"
+      "uniform mat4   objectmat;    \n"
+      "attribute vec3 a_position;   \n"
       "attribute vec2 a_texCoord;   \n"
       "varying vec2 v_texCoord;     \n"
       "void main()                  \n"
       "{                            \n"
-      "   gl_Position = a_position; \n"
+      "   gl_Position = objectmat*vec4(a_position,1); \n"
       "   v_texCoord = a_texCoord;  \n"
       "}                            \n";
    
    GLbyte fShaderStr[] =  
+      "\n"
+      "#extension GL_OES_EGL_image_external : enable\n"
+      "uniform samplerExternalOES texunit;\n"
       "precision mediump float;                            \n"
       "varying vec2 v_texCoord;                            \n"
       "uniform sampler2D s_texture;                        \n"
       "void main()                                         \n"
       "{                                                   \n"
-      "  gl_FragColor = texture2D( s_texture, v_texCoord );\n"
+      "  gl_FragColor = texture2D( texunit, v_texCoord );  \n"
       "}                                                   \n";
+
 
    // Load the shaders and get a linked program object
    userData->programObject = esLoadProgram ( vShaderStr, fShaderStr );
@@ -130,9 +149,9 @@ int Init ( ESContext *esContext )
    userData->samplerLoc = glGetUniformLocation ( userData->programObject, "s_texture" );
 
    // Load the texture
-   userData->textureId = CreateSimpleTexture2D (255, 0, 255);
+   userData->textureId = CreateSimpleTexture2D (255, 50, 255);
 
-   glClearColor ( 0.0f, 0.0f, 0.0f, 0.0f );
+   glClearColor ( 255.0f, 255.0f, 255.0f, 255.0f );
    return GL_TRUE;
 }
 
@@ -153,49 +172,14 @@ void Draw ( ESContext *esContext )
                          };
    GLushort indices[] = { 0, 1, 2, 0, 2, 3 };
 
-   if ( !eglMakeCurrent(esContext->eglDisplay, esContext->eglSurface, esContext->eglSurface, esContext->eglContext) )
-   {
-      printf("No make.\n");
-   }
-   
-      
-   // Set the viewport
-   glViewport ( 0, 0, esContext->width, esContext->height );
-   
-   // Clear the color buffer
-   glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-   // Use the program object
-   glUseProgram ( userData->programObject );
-
-   // Load the vertex position
-   glVertexAttribPointer ( userData->positionLoc, 3, GL_FLOAT, 
-                           GL_FALSE, 5 * sizeof(GLfloat), vVertices );
-   // Load the texture coordinate
-   glVertexAttribPointer ( userData->texCoordLoc, 2, GL_FLOAT,
-                           GL_FALSE, 5 * sizeof(GLfloat), &vVertices[3] );
-
-   glEnableVertexAttribArray ( userData->positionLoc );
-   glEnableVertexAttribArray ( userData->texCoordLoc );
-
-   // Bind the texture
-   // glActiveTexture ( GL_TEXTURE0 );
-   glBindTexture ( GL_TEXTURE_EXTERNAL_OES, userData->textureId );
-
-   // Set the sampler texture unit to 0
-   glUniform1i ( userData->samplerLoc, 0 );
-
-   // glDrawElements ( GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indices );
-   glDrawArrays ( GL_TRIANGLE_STRIP, 0, 4 );
-
-
    eglStatus = 0;
    eglQueryStreamKHR(esContext->eglDisplay, stream, EGL_STREAM_STATE_KHR, &eglStatus);
    if (eglStatus == EGL_STREAM_STATE_NEW_FRAME_AVAILABLE_KHR) {
-    // printf ("%s\n", "New frame.\n");
+    printf ("%s\n", "New frame.\n");
    }
 
    if (!eglStreamConsumerAcquireKHR(esContext->eglDisplay, stream)) {
+
       eglStatus = 0;
       eglQueryStreamKHR(esContext->eglDisplay, stream, EGL_STREAM_STATE_KHR, &eglStatus);
 
@@ -225,7 +209,42 @@ void Draw ( ESContext *esContext )
 
    } else { 
       printf("Valid.\n");
+      // printf ("%d\n", EGL_CONSUMER_FRAME_KHR);
    }
+
+   if ( !eglMakeCurrent(esContext->eglDisplay, esContext->eglSurface, esContext->eglSurface, esContext->eglContext) )
+   {
+      printf("No make.\n");
+   }
+   
+   // Set the viewport
+   glViewport ( 0, 0, esContext->width, esContext->height );
+   
+   // Clear the color buffer
+   glClear ( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+
+   // Use the program object
+   glUseProgram ( userData->programObject );
+
+   // Load the vertex position
+   glVertexAttribPointer ( userData->positionLoc, 3, GL_FLOAT, 
+                           GL_FALSE, 5 * sizeof(GLfloat), vVertices );
+   // Load the texture coordinate
+   glVertexAttribPointer ( userData->texCoordLoc, 2, GL_FLOAT,
+                           GL_FALSE, 5 * sizeof(GLfloat), &vVertices[3] );
+
+   glEnableVertexAttribArray ( userData->positionLoc );
+   glEnableVertexAttribArray ( userData->texCoordLoc );
+
+   // Bind the texture
+   glActiveTexture ( GL_TEXTURE0 );
+   glBindTexture ( GL_TEXTURE_EXTERNAL_OES, userData->textureId );
+
+   // glDrawElements ( GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, indices );
+   glDrawArrays ( GL_TRIANGLE_STRIP, 0, 4 );
+
+   // Set the sampler texture unit to 0
+   glUniform1i ( userData->samplerLoc, 0 );
 
    eglStatus = eglSwapBuffers(esContext->eglDisplay, esContext->eglSurface);
    if (!eglStatus) {
@@ -236,16 +255,19 @@ void Draw ( ESContext *esContext )
 
    switch (eglStatus) {
     case EGL_BAD_DISPLAY:
-       printf ("%s\n", "Bad display.\n");
+       printf ("%s\n", "Bad display.");
        break;
     case EGL_NOT_INITIALIZED:
-       printf ("%s\n", "Not initialized.\n");
+       printf ("%s\n", "Not initialized.");
        break;
     case EGL_BAD_SURFACE:
-       printf ("%s\n", "Bad surface.\n");
+       printf ("%s\n", "Bad surface.");
        break;
     case EGL_CONTEXT_LOST:
-       printf ("%s\n", "Context lost.\n");
+       printf ("%s\n", "Context lost.");
+       break;
+    case GL_INVALID_FRAMEBUFFER_OPERATION:
+       printf ("%s\n", "Invalid buffer operation.");
        break;
     case GL_NO_ERROR:
        // printf ("%s\n", "Swap done.\n");

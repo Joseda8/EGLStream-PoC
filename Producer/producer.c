@@ -156,11 +156,13 @@ void Draw ( ESContext *esContext )
    if (control == 250){
       control = 0;
    }
-   userData->textureId = CreateSimpleTexture2D (200, control, 255);
 
    // Bind the texture
    glActiveTexture ( GL_TEXTURE0 );
    glBindTexture ( GL_TEXTURE_2D, userData->textureId );
+
+   userData->textureId = CreateSimpleTexture2D (200, control, 255);
+   eglSwapBuffers(esContext->eglDisplay, esContext->eglSurface);
 
    // Set the sampler texture unit to 0
    glUniform1i ( userData->samplerLoc, 0 );
